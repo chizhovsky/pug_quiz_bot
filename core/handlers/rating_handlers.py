@@ -6,5 +6,5 @@ router = Router(name=__name__)
 
 
 @router.message(Command("rating"))
-async def get_info(message: Message):
+async def get_rating(message: Message):
     await message.answer("Здесь будет рейтинг игроков")

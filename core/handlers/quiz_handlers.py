@@ -1,7 +1,9 @@
 from aiogram import Bot, Router
+from aiogram.enums import ParseMode
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
+from aiogram.utils import markdown
 
 from config import (
     emoji_five,
@@ -33,6 +35,14 @@ correct_answers = {
     4: "Австралия",
     5: "Таджикистан",
 }
+image_urls = {
+    0: "https://images.unsplash.com/photo-1552832230-c0197dd311b5?q=80&w=480&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",  # noqa
+    1: "https://images.unsplash.com/photo-1513407030348-c983a97b98d8?q=80&w=480&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",  # noqa
+    2: "https://images.unsplash.com/photo-1552337125-0c43e12efec0?q=80&w=480&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",  # noqa
+    3: "https://images.unsplash.com/photo-1543783207-ec64e4d95325?q=80&w=480&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",  # noqa
+    4: "https://images.unsplash.com/photo-1611231731916-826fe315c533?q=80&w=480&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",  # noqa
+    5: "https://images.unsplash.com/photo-1707663154646-06390356b683?q=80&w=480&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",  # noqa
+}
 
 
 @router.message(Command("quiz"))
@@ -41,7 +51,11 @@ async def get_quiz(message: Message, state: FSMContext):
         f"{message.from_user.first_name}, начинаем викторину."
     )
     await message.answer(
-        f"{emoji_one} Столицей какой страны является Рим?",
+        text=f"{emoji_one}{markdown.hide_link(image_urls[0])}",
+        parse_mode=ParseMode.HTML,
+    )
+    await message.answer(
+        text="Столицей какой страны является Рим?",
         reply_markup=quiz_keyboard(quiz_buttons[0]),
     )
     await state.set_state(QuizForm.SECOND_QUESTION)
@@ -56,6 +70,7 @@ async def handle_question(
     next_question_text: str,
     next_question_buttons: list[str],
     emoji: str,
+    url: str,
 ):
     await state.update_data(**{answer_key: message.text})
     context_data = await state.get_data()
@@ -72,7 +87,10 @@ async def handle_question(
         await set_reaction(bot, message.chat.id, message.message_id, "💔")
 
     await message.answer(
-        f"{emoji} {next_question_text}",
+        text=f"{emoji}{markdown.hide_link(url)}", parse_mode=ParseMode.HTML
+    )
+    await message.answer(
+        text=f"{next_question_text}",
         reply_markup=quiz_keyboard(next_question_buttons),
     )
     next_question_state = QuizForm.NEXT_QUESTION_MAPPING.get(answer_key)
@@ -93,6 +111,7 @@ async def get_second_question(message: Message, state: FSMContext, bot: Bot):
         "Столицей какой страны является Токио?",
         quiz_buttons[1],
         emoji_two,
+        image_urls[1],
     )
 
 
@@ -107,6 +126,7 @@ async def get_third_question(message: Message, state: FSMContext, bot: Bot):
         "Столицей какой страны является Вашингтон?",
         quiz_buttons[2],
         emoji_three,
+        image_urls[2],
     )
 
 
@@ -121,6 +141,7 @@ async def get_fourth_question(message: Message, state: FSMContext, bot: Bot):
         "Столицей какой страны является Мадрид?",
         quiz_buttons[3],
         emoji_four,
+        image_urls[3],
     )
 
 
@@ -135,6 +156,7 @@ async def get_fifth_question(message: Message, state: FSMContext, bot: Bot):
         "Столицей какой страны является Канберра?",
         quiz_buttons[4],
         emoji_five,
+        image_urls[4],
     )
 
 
@@ -149,6 +171,7 @@ async def get_sixth_question(message: Message, state: FSMContext, bot: Bot):
         "Столицей какой страны является Душанбе?",
         quiz_buttons[5],
         emoji_six,
+        image_urls[5],
     )
 
 
