@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from logging.handlers import RotatingFileHandler
 
 from aiogram import Bot, Dispatcher
 
@@ -11,12 +12,13 @@ from core.utils.start_bot import start
 async def main():
     dp = Dispatcher()
     dp.include_router(main_router)
+    log_handler = RotatingFileHandler(filename="quiz.log", maxBytes=500000)
     logging.basicConfig(
-        filename="quiz.log",
         level=logging.DEBUG,
         format="%(asctime)s [%(levelname)s] %(name)s "
         "(%(filename)s).%(funcName)s(%(lineno)d) %(message)s",
         datefmt="%d-%m-%Y %H:%M",
+        handlers=[log_handler],
     )
     bot = Bot(token=token, parse_mode="HTML")
     await start(bot, dp)
