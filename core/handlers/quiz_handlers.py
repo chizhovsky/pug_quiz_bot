@@ -60,9 +60,17 @@ async def handle_question(
     await state.update_data(**{answer_key: message.text})
     context_data = await state.get_data()
     if context_data.get(answer_key) == correct_answer:
+        await state.update_data(**{answer_key: f"<b>{message.text}</b> ✅"})
         await set_reaction(bot, message.chat.id, message.message_id, "👍")
     else:
+        await state.update_data(
+            **{
+                answer_key: message.text
+                + f" ❌\nПравильный ответ: <b>{correct_answer}</b>"
+            }
+        )
         await set_reaction(bot, message.chat.id, message.message_id, "💔")
+
     await message.answer(
         f"{emoji} {next_question_text}",
         reply_markup=quiz_keyboard(next_question_buttons),
@@ -148,17 +156,25 @@ async def get_sixth_question(message: Message, state: FSMContext, bot: Bot):
 async def get_quiz_result(message: Message, state: FSMContext, bot: Bot):
     await state.update_data(answer5=message.text)
     context_data = await state.get_data()
-    if context_data.get("answer5") == correct_answers[5]:
+    correct_answer = correct_answers[5]
+    if context_data.get("answer5") == correct_answer:
+        context_data = await state.update_data(
+            answer5=f"<b>{message.text}</b> ✅"
+        )
         await set_reaction(bot, message.chat.id, message.message_id, "👍")
     else:
+        context_data = await state.update_data(
+            answer5=message.text
+            + f" ❌\nПравильный ответ: <b>{correct_answer}</b>"
+        )
         await set_reaction(bot, message.chat.id, message.message_id, "💔")
     data_user = (
-        f"Ответ 1: {context_data.get('answer0')}\r\n"
-        f"Ответ 2: {context_data.get('answer1')}\r\n"
-        f"Ответ 3: {context_data.get('answer2')}\r\n"
-        f"Ответ 4: {context_data.get('answer3')}\r\n"
-        f"Ответ 5: {context_data.get('answer4')}\r\n"
-        f"Ответ 6: {context_data.get('answer5')}"
+        f"{emoji_one} {context_data.get('answer0')}\n\n"
+        f"{emoji_two} {context_data.get('answer1')}\n\n"
+        f"{emoji_three} {context_data.get('answer2')}\n\n"
+        f"{emoji_four} {context_data.get('answer3')}\n\n"
+        f"{emoji_five} {context_data.get('answer4')}\n\n"
+        f"{emoji_six} {context_data.get('answer5')}"
     )
     await message.answer(data_user)
     await state.clear()
