@@ -1,3 +1,5 @@
+import time
+
 from aiogram import Bot, Router
 from aiogram.enums import ParseMode
 from aiogram.filters import Command
@@ -5,15 +7,9 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 from aiogram.utils import markdown
 
-from config import (
-    emoji_five,
-    emoji_four,
-    emoji_one,
-    emoji_six,
-    emoji_three,
-    emoji_two,
-)
-from core.keyboards.quiz_keyboard import quiz_keyboard
+from core.keyboards.quiz_keyboards import quiz_keyboard
+from core.utils.bot_messages import emoji_list, generate_data_user
+from core.utils.math_operations import calculate_score
 from core.utils.set_message_reaction import set_reaction
 from core.utils.states_form import QuizForm
 
@@ -46,14 +42,17 @@ image_urls = {
 
 
 @router.message(Command("quiz"))
-async def get_quiz(message: Message, state: FSMContext):
-    await message.answer(
-        f"{message.from_user.first_name}, начинаем викторину."
+async def get_quiz(message: Message, state: FSMContext, bot: Bot):
+    await bot.send_message(
+        chat_id=message.chat.id,
+        text=f"{message.from_user.first_name}, начинаем викторину.",
     )
-    await message.answer(
-        text=f"{emoji_one}{markdown.hide_link(image_urls[0])}",
+    await bot.send_message(
+        chat_id=message.chat.id,
+        text=f"{emoji_list[0]}{markdown.hide_link(image_urls[0])}",
         parse_mode=ParseMode.HTML,
     )
+    await state.update_data(start_time_0=time.time())
     await message.answer(
         text="Столицей какой страны является Рим?",
         reply_markup=quiz_keyboard(quiz_buttons[0]),
@@ -65,39 +64,54 @@ async def handle_question(
     message: Message,
     state: FSMContext,
     bot: Bot,
-    answer_key: str,
     correct_answer: str,
+    emoji: str,
+    image_url: str,
     next_question_text: str,
     next_question_buttons: list[str],
-    emoji: str,
-    url: str,
+    answer_key: str,
+    start_time_key: str,
+    end_time_key: str,
+    score_key: str,
+    next_question_state: str,
 ):
-    await state.update_data(**{answer_key: message.text})
+    await state.update_data(
+        **{answer_key: message.text, end_time_key: time.time()}
+    )
     context_data = await state.get_data()
+    diff_time = context_data.get(end_time_key) - context_data.get(
+        start_time_key
+    )
     if context_data.get(answer_key) == correct_answer:
-        await state.update_data(**{answer_key: f"<b>{message.text}</b> ✅"})
+        await state.update_data(
+            **{
+                answer_key: f"<b>{message.text}</b> ✅",
+                score_key: calculate_score(diff_time),
+            }
+        )
         await set_reaction(bot, message.chat.id, message.message_id, "👍")
     else:
         await state.update_data(
             **{
                 answer_key: message.text
                 + f" ❌\nПравильный ответ: <b>{correct_answer}</b>"
-            }
+            },
+            **{score_key: 0},
         )
         await set_reaction(bot, message.chat.id, message.message_id, "💔")
-
-    await message.answer(
-        text=f"{emoji}{markdown.hide_link(url)}", parse_mode=ParseMode.HTML
+    await bot.send_message(
+        chat_id=message.chat.id,
+        text=f"{emoji}{markdown.hide_link(image_url)}",
+        parse_mode=ParseMode.HTML,
+    )
+    await state.update_data(
+        **{f"start_time_{int(start_time_key[-1]) + 1}": time.time()}
     )
     await message.answer(
-        text=f"{next_question_text}",
+        text=next_question_text,
         reply_markup=quiz_keyboard(next_question_buttons),
     )
-    next_question_state = QuizForm.NEXT_QUESTION_MAPPING.get(answer_key)
-    if next_question_state:
-        await state.set_state(next_question_state)
-    else:
-        await state.set_state(QuizForm.RESULT)
+    await state.set_state(next_question_state)
 
 
 @router.message(QuizForm.SECOND_QUESTION)
@@ -106,12 +120,16 @@ async def get_second_question(message: Message, state: FSMContext, bot: Bot):
         message,
         state,
         bot,
-        "answer0",
         correct_answers[0],
+        emoji_list[1],
+        image_urls[1],
         "Столицей какой страны является Токио?",
         quiz_buttons[1],
-        emoji_two,
-        image_urls[1],
+        "answer_0",
+        "start_time_0",
+        "end_time_0",
+        "score_0",
+        QuizForm.THIRD_QUESTION,
     )
 
 
@@ -121,12 +139,16 @@ async def get_third_question(message: Message, state: FSMContext, bot: Bot):
         message,
         state,
         bot,
-        "answer1",
         correct_answers[1],
+        emoji_list[2],
+        image_urls[2],
         "Столицей какой страны является Вашингтон?",
         quiz_buttons[2],
-        emoji_three,
-        image_urls[2],
+        "answer_1",
+        "start_time_1",
+        "end_time_1",
+        "score_1",
+        QuizForm.FOURTH_QUESTION,
     )
 
 
@@ -136,12 +158,16 @@ async def get_fourth_question(message: Message, state: FSMContext, bot: Bot):
         message,
         state,
         bot,
-        "answer2",
         correct_answers[2],
+        emoji_list[3],
+        image_urls[3],
         "Столицей какой страны является Мадрид?",
         quiz_buttons[3],
-        emoji_four,
-        image_urls[3],
+        "answer_2",
+        "start_time_2",
+        "end_time_2",
+        "score_2",
+        QuizForm.FIFTH_QUESTION,
     )
 
 
@@ -151,12 +177,16 @@ async def get_fifth_question(message: Message, state: FSMContext, bot: Bot):
         message,
         state,
         bot,
-        "answer3",
         correct_answers[3],
+        emoji_list[4],
+        image_urls[4],
         "Столицей какой страны является Канберра?",
         quiz_buttons[4],
-        emoji_five,
-        image_urls[4],
+        "answer_3",
+        "start_time_3",
+        "end_time_3",
+        "score_3",
+        QuizForm.SIXTH_QUESTION,
     )
 
 
@@ -166,38 +196,40 @@ async def get_sixth_question(message: Message, state: FSMContext, bot: Bot):
         message,
         state,
         bot,
-        "answer4",
         correct_answers[4],
+        emoji_list[5],
+        image_urls[5],
         "Столицей какой страны является Душанбе?",
         quiz_buttons[5],
-        emoji_six,
-        image_urls[5],
+        "answer_4",
+        "start_time_4",
+        "end_time_4",
+        "score_4",
+        QuizForm.RESULT,
     )
 
 
 @router.message(QuizForm.RESULT)
 async def get_quiz_result(message: Message, state: FSMContext, bot: Bot):
-    await state.update_data(answer5=message.text)
+    await state.update_data(answer_5=message.text, end_time_5=time.time())
     context_data = await state.get_data()
     correct_answer = correct_answers[5]
-    if context_data.get("answer5") == correct_answer:
+    diff_time_5 = context_data.get("end_time_5") - context_data.get(
+        "start_time_5"
+    )
+    if context_data.get("answer_5") == correct_answer:
         context_data = await state.update_data(
-            answer5=f"<b>{message.text}</b> ✅"
+            answer_5=f"<b>{message.text}</b> ✅",
+            score_5=calculate_score(diff_time_5),
         )
         await set_reaction(bot, message.chat.id, message.message_id, "👍")
     else:
         context_data = await state.update_data(
-            answer5=message.text
-            + f" ❌\nПравильный ответ: <b>{correct_answer}</b>"
+            answer_5=message.text
+            + f" ❌\nПравильный ответ: <b>{correct_answer}</b>",
+            score_5=0,
         )
         await set_reaction(bot, message.chat.id, message.message_id, "💔")
-    data_user = (
-        f"{emoji_one} {context_data.get('answer0')}\n\n"
-        f"{emoji_two} {context_data.get('answer1')}\n\n"
-        f"{emoji_three} {context_data.get('answer2')}\n\n"
-        f"{emoji_four} {context_data.get('answer3')}\n\n"
-        f"{emoji_five} {context_data.get('answer4')}\n\n"
-        f"{emoji_six} {context_data.get('answer5')}"
-    )
+    data_user = generate_data_user(context_data)
     await message.answer(data_user)
     await state.clear()

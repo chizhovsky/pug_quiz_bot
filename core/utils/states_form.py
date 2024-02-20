@@ -9,11 +9,3 @@ class QuizForm(StatesGroup):
     FIFTH_QUESTION = State()
     SIXTH_QUESTION = State()
     RESULT = State()
-
-    NEXT_QUESTION_MAPPING = {
-        "answer0": THIRD_QUESTION,
-        "answer1": FOURTH_QUESTION,
-        "answer2": FIFTH_QUESTION,
-        "answer3": SIXTH_QUESTION,
-        "answer4": RESULT,
-    }
