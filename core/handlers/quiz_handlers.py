@@ -8,9 +8,12 @@ from aiogram.types import Message
 from aiogram.utils import markdown
 
 from core.keyboards.quiz_keyboards import quiz_keyboard
-from core.utils.bot_messages import emoji_list, generate_data_user
+from core.utils.bot_messages import (
+    emoji_list,
+    generate_data_user,
+    set_reaction,
+)
 from core.utils.math_operations import calculate_score
-from core.utils.set_message_reaction import set_reaction
 from core.utils.states_form import QuizForm
 
 router = Router(name=__name__)

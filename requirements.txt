@@ -1,6 +1,6 @@
 aiogram==3.3.0
 asyncio==3.4.3
+asyncpg==0.29.0
 emoji==2.10.1
 pre-commit==3.6.1
-pymongo==4.6.1
 python-dotenv==1.0.0

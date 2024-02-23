@@ -5,11 +5,13 @@ from logging.handlers import RotatingFileHandler
 from aiogram import Bot, Dispatcher
 
 from config import token
+from core.database.db_connect import get_db_questions
 from core.routers import router as main_router
 from core.utils.start_bot import start
 
 
 async def main():
+    await get_db_questions()
     dp = Dispatcher()
     dp.include_router(main_router)
     log_handler = RotatingFileHandler(filename="quiz.log", maxBytes=500000)
