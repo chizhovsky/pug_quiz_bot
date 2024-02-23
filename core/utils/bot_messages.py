@@ -1,3 +1,4 @@
+from aiogram.types.reaction_type_emoji import ReactionTypeEmoji
 from emoji import emojize
 
 from core.utils.math_operations import calculate_score_sum
@@ -24,3 +25,8 @@ def generate_data_user(context_data):
     score_sum = calculate_score_sum(context_data)
     data_user += f"<b>Сумма баллов: {score_sum}</b>"
     return data_user
+
+
+async def set_reaction(bot, chat_id, message_id, emoji):
+    reaction = ReactionTypeEmoji(type="emoji", emoji=emoji)
+    await bot.set_message_reaction(chat_id, message_id, reaction=[reaction])
