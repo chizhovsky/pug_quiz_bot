@@ -1,3 +1,4 @@
+import random
 import time
 
 from aiogram import Bot, Router
@@ -7,6 +8,8 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 from aiogram.utils import markdown
 
+from config import questions_count
+from core.database.db_connect import get_random_questions
 from core.keyboards.quiz_keyboards import quiz_keyboard
 from core.utils.bot_messages import (
     emoji_list,
@@ -18,34 +21,35 @@ from core.utils.states_form import QuizForm
 
 router = Router(name=__name__)
 
-quiz_buttons = [
-    ["Россия", "Испания", "Италия", "Германия"],
-    ["Япония", "Китай", "Индия", "Южная Корея"],
-    ["Великобритания", "США", "Австралия", "Канада"],
-    ["Италия", "Германия", "Испания", "Франция"],
-    ["Канада", "Мальдивы", "Новая Зеландия", "Австралия"],
-    ["Таджикистан", "Узбекистан", "Кыргызстан", "Туркменистан"],
-]
-correct_answers = {
-    0: "Италия",
-    1: "Япония",
-    2: "США",
-    3: "Испания",
-    4: "Австралия",
-    5: "Таджикистан",
-}
-image_urls = {
-    0: "https://images.unsplash.com/photo-1552832230-c0197dd311b5?q=80&w=480&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",  # noqa
-    1: "https://images.unsplash.com/photo-1513407030348-c983a97b98d8?q=80&w=480&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",  # noqa
-    2: "https://images.unsplash.com/photo-1552337125-0c43e12efec0?q=80&w=480&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",  # noqa
-    3: "https://images.unsplash.com/photo-1543783207-ec64e4d95325?q=80&w=480&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",  # noqa
-    4: "https://images.unsplash.com/photo-1611231731916-826fe315c533?q=80&w=480&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",  # noqa
-    5: "https://images.unsplash.com/photo-1707663154646-06390356b683?q=80&w=480&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",  # noqa
-}
+quiz_buttons = [[] for _ in range(questions_count)]
+correct_answers = [""] * questions_count
+question_text = [""] * questions_count
+image_urls = [""] * questions_count
+
+
+async def process_questions(random_questions):
+    for i in range(questions_count):
+        question = random_questions[i]
+        answers = [
+            question["answer1"],
+            question["answer2"],
+            question["answer3"],
+            question["answer4"],
+        ]
+        random.shuffle(answers)
+        quiz_buttons[i] = answers
+        correct_answers[i] = question["correct_answer"]
+        question_text[i] = question["question_text"]
+        image_urls[i] = question["image_url"]
+    return quiz_buttons, correct_answers, question_text, image_urls
 
 
 @router.message(Command("quiz"))
 async def get_quiz(message: Message, state: FSMContext, bot: Bot):
+    random_questions = await get_random_questions()
+    quiz_buttons, correct_answers, question_text, image_urls = (
+        await process_questions(random_questions)
+    )
     await bot.send_message(
         chat_id=message.chat.id,
         text=f"{message.from_user.first_name}, начинаем викторину.",
@@ -57,7 +61,7 @@ async def get_quiz(message: Message, state: FSMContext, bot: Bot):
     )
     await state.update_data(start_time_0=time.time())
     await message.answer(
-        text="Столицей какой страны является Рим?",
+        text=question_text[0],
         reply_markup=quiz_keyboard(quiz_buttons[0]),
     )
     await state.set_state(QuizForm.SECOND_QUESTION)
@@ -126,7 +130,7 @@ async def get_second_question(message: Message, state: FSMContext, bot: Bot):
         correct_answers[0],
         emoji_list[1],
         image_urls[1],
-        "Столицей какой страны является Токио?",
+        question_text[1],
         quiz_buttons[1],
         "answer_0",
         "start_time_0",
@@ -145,7 +149,7 @@ async def get_third_question(message: Message, state: FSMContext, bot: Bot):
         correct_answers[1],
         emoji_list[2],
         image_urls[2],
-        "Столицей какой страны является Вашингтон?",
+        question_text[2],
         quiz_buttons[2],
         "answer_1",
         "start_time_1",
@@ -164,7 +168,7 @@ async def get_fourth_question(message: Message, state: FSMContext, bot: Bot):
         correct_answers[2],
         emoji_list[3],
         image_urls[3],
-        "Столицей какой страны является Мадрид?",
+        question_text[3],
         quiz_buttons[3],
         "answer_2",
         "start_time_2",
@@ -183,7 +187,7 @@ async def get_fifth_question(message: Message, state: FSMContext, bot: Bot):
         correct_answers[3],
         emoji_list[4],
         image_urls[4],
-        "Столицей какой страны является Канберра?",
+        question_text[4],
         quiz_buttons[4],
         "answer_3",
         "start_time_3",
@@ -202,7 +206,7 @@ async def get_sixth_question(message: Message, state: FSMContext, bot: Bot):
         correct_answers[4],
         emoji_list[5],
         image_urls[5],
-        "Столицей какой страны является Душанбе?",
+        question_text[5],
         quiz_buttons[5],
         "answer_4",
         "start_time_4",

@@ -13,3 +13,4 @@ db_settings = {
     "password": os.getenv("DB_PASSWORD"),
     "port": os.getenv("DB_PORT"),
 }
+questions_count = 6

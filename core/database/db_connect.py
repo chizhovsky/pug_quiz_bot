@@ -17,21 +17,14 @@ async def connect_to_postgres():
         print(error)
 
 
-async def fetch_data():
+async def get_random_questions():
     conn = await connect_to_postgres()
     try:
-        result = await conn.fetch("SELECT * FROM question")
-        return result
+        questions = await conn.fetch(
+            "SELECT * FROM question ORDER BY RANDOM() LIMIT 6"
+        )
+        return questions
     except Exception as error:
-        print(error)
+        print("Ошибка получения данных из базы данных:", error)
     finally:
         await conn.close()
-
-
-async def get_db_questions():
-    data = await fetch_data()
-    if data:
-        for question in data:
-            print(question)
-    else:
-        print("База данных не найдена")
