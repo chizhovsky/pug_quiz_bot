@@ -2,6 +2,7 @@ from aiogram.fsm.state import State, StatesGroup
 
 
 class QuizForm(StatesGroup):
+    CHOOSE_CATEGORY = State()
     START_QUIZ = State()
     SECOND_QUESTION = State()
     THIRD_QUESTION = State()
