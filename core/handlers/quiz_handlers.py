@@ -1,15 +1,18 @@
+import random
 import time
 
 from aiogram import Bot, Router
 from aiogram.enums import ParseMode
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message
+from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove
 from aiogram.utils import markdown
 
-from core.keyboards.quiz_keyboards import quiz_keyboard
+from config import questions_count
+from core.database.db_connect import Request, get_random_questions
+from core.keyboards.quiz_keyboards import category_keyboard, quiz_keyboard
 from core.utils.bot_messages import (
-    emoji_list,
+    emoji_numbers,
     generate_data_user,
     set_reaction,
 )
@@ -18,46 +21,75 @@ from core.utils.states_form import QuizForm
 
 router = Router(name=__name__)
 
-quiz_buttons = [
-    ["Россия", "Испания", "Италия", "Германия"],
-    ["Япония", "Китай", "Индия", "Южная Корея"],
-    ["Великобритания", "США", "Австралия", "Канада"],
-    ["Италия", "Германия", "Испания", "Франция"],
-    ["Канада", "Мальдивы", "Новая Зеландия", "Австралия"],
-    ["Таджикистан", "Узбекистан", "Кыргызстан", "Туркменистан"],
+quiz_buttons = [[] for _ in range(questions_count)]
+correct_answers = [""] * questions_count
+question_text = [""] * questions_count
+image_urls = [""] * questions_count
+quiz_forms = [
+    QuizForm.SECOND_QUESTION,
+    QuizForm.THIRD_QUESTION,
+    QuizForm.FOURTH_QUESTION,
+    QuizForm.FIFTH_QUESTION,
+    QuizForm.SIXTH_QUESTION,
 ]
-correct_answers = {
-    0: "Италия",
-    1: "Япония",
-    2: "США",
-    3: "Испания",
-    4: "Австралия",
-    5: "Таджикистан",
-}
-image_urls = {
-    0: "https://images.unsplash.com/photo-1552832230-c0197dd311b5?q=80&w=480&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",  # noqa
-    1: "https://images.unsplash.com/photo-1513407030348-c983a97b98d8?q=80&w=480&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",  # noqa
-    2: "https://images.unsplash.com/photo-1552337125-0c43e12efec0?q=80&w=480&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",  # noqa
-    3: "https://images.unsplash.com/photo-1543783207-ec64e4d95325?q=80&w=480&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",  # noqa
-    4: "https://images.unsplash.com/photo-1611231731916-826fe315c533?q=80&w=480&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",  # noqa
-    5: "https://images.unsplash.com/photo-1707663154646-06390356b683?q=80&w=480&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",  # noqa
-}
+
+
+async def process_questions(random_questions):
+    for i in range(questions_count):
+        question = random_questions[i]
+        answers = [
+            question["correct_answer"],
+            question["answer1"],
+            question["answer2"],
+            question["answer3"],
+        ]
+        random.shuffle(answers)
+        quiz_buttons[i] = answers
+        correct_answers[i] = question["correct_answer"]
+        question_text[i] = question["question_text"]
+        image_urls[i] = question["image_url"]
+    return quiz_buttons, correct_answers, question_text, image_urls
 
 
 @router.message(Command("quiz"))
+async def choose_category(
+    message: Message, state: FSMContext, request: Request
+):
+    await message.answer(
+        text="Выбери категорию:",
+        reply_markup=category_keyboard(),
+    )
+    await state.set_state(QuizForm.CHOOSE_CATEGORY)
+
+
+@router.callback_query(QuizForm.CHOOSE_CATEGORY)
+async def process_category(callback_query: CallbackQuery, state: FSMContext):
+    selected_category = callback_query.data
+    await state.update_data(category=selected_category)
+    await state.set_state(QuizForm.START_QUIZ)
+    await get_quiz(callback_query.message, state, callback_query.bot)
+
+
+@router.message(QuizForm.START_QUIZ)
 async def get_quiz(message: Message, state: FSMContext, bot: Bot):
-    await bot.send_message(
-        chat_id=message.chat.id,
-        text=f"{message.from_user.first_name}, начинаем викторину.",
+    context_data = await state.get_data()
+    global quiz_buttons, correct_answers, question_text, image_urls
+    random_questions = await get_random_questions(context_data.get("category"))
+    quiz_buttons, correct_answers, question_text, image_urls = (
+        await process_questions(random_questions)
     )
     await bot.send_message(
         chat_id=message.chat.id,
-        text=f"{emoji_list[0]}{markdown.hide_link(image_urls[0])}",
+        text="Начинаем викторину ⚡️",
+    )
+    await bot.send_message(
+        chat_id=message.chat.id,
+        text=f"{emoji_numbers[0]}{markdown.hide_link(image_urls[0])}",
         parse_mode=ParseMode.HTML,
     )
     await state.update_data(start_time_0=time.time())
     await message.answer(
-        text="Столицей какой страны является Рим?",
+        text=question_text[0],
         reply_markup=quiz_keyboard(quiz_buttons[0]),
     )
     await state.set_state(QuizForm.SECOND_QUESTION)
@@ -117,103 +149,33 @@ async def handle_question(
     await state.set_state(next_question_state)
 
 
-@router.message(QuizForm.SECOND_QUESTION)
-async def get_second_question(message: Message, state: FSMContext, bot: Bot):
-    await handle_question(
-        message,
-        state,
-        bot,
-        correct_answers[0],
-        emoji_list[1],
-        image_urls[1],
-        "Столицей какой страны является Токио?",
-        quiz_buttons[1],
-        "answer_0",
-        "start_time_0",
-        "end_time_0",
-        "score_0",
-        QuizForm.THIRD_QUESTION,
-    )
+for index, question_number in enumerate(quiz_forms):
 
-
-@router.message(QuizForm.THIRD_QUESTION)
-async def get_third_question(message: Message, state: FSMContext, bot: Bot):
-    await handle_question(
-        message,
-        state,
-        bot,
-        correct_answers[1],
-        emoji_list[2],
-        image_urls[2],
-        "Столицей какой страны является Вашингтон?",
-        quiz_buttons[2],
-        "answer_1",
-        "start_time_1",
-        "end_time_1",
-        "score_1",
-        QuizForm.FOURTH_QUESTION,
-    )
-
-
-@router.message(QuizForm.FOURTH_QUESTION)
-async def get_fourth_question(message: Message, state: FSMContext, bot: Bot):
-    await handle_question(
-        message,
-        state,
-        bot,
-        correct_answers[2],
-        emoji_list[3],
-        image_urls[3],
-        "Столицей какой страны является Мадрид?",
-        quiz_buttons[3],
-        "answer_2",
-        "start_time_2",
-        "end_time_2",
-        "score_2",
-        QuizForm.FIFTH_QUESTION,
-    )
-
-
-@router.message(QuizForm.FIFTH_QUESTION)
-async def get_fifth_question(message: Message, state: FSMContext, bot: Bot):
-    await handle_question(
-        message,
-        state,
-        bot,
-        correct_answers[3],
-        emoji_list[4],
-        image_urls[4],
-        "Столицей какой страны является Канберра?",
-        quiz_buttons[4],
-        "answer_3",
-        "start_time_3",
-        "end_time_3",
-        "score_3",
-        QuizForm.SIXTH_QUESTION,
-    )
-
-
-@router.message(QuizForm.SIXTH_QUESTION)
-async def get_sixth_question(message: Message, state: FSMContext, bot: Bot):
-    await handle_question(
-        message,
-        state,
-        bot,
-        correct_answers[4],
-        emoji_list[5],
-        image_urls[5],
-        "Столицей какой страны является Душанбе?",
-        quiz_buttons[5],
-        "answer_4",
-        "start_time_4",
-        "end_time_4",
-        "score_4",
-        QuizForm.RESULT,
-    )
+    @router.message(question_number)
+    async def get_question(
+        message: Message, state: FSMContext, bot: Bot, idx=index
+    ):
+        await handle_question(
+            message,
+            state,
+            bot,
+            correct_answers[idx],
+            emoji_numbers[idx + 1],
+            image_urls[idx + 1],
+            question_text[idx + 1],
+            quiz_buttons[idx + 1],
+            f"answer_{idx}",
+            f"start_time_{idx}",
+            f"end_time_{idx}",
+            f"score_{idx}",
+            QuizForm.RESULT if idx == 4 else quiz_forms[idx + 1],
+        )
 
 
 @router.message(QuizForm.RESULT)
-async def get_quiz_result(message: Message, state: FSMContext, bot: Bot):
+async def get_quiz_result(
+    message: Message, state: FSMContext, bot: Bot, request: Request
+):
     await state.update_data(answer_5=message.text, end_time_5=time.time())
     context_data = await state.get_data()
     correct_answer = correct_answers[5]
@@ -233,6 +195,14 @@ async def get_quiz_result(message: Message, state: FSMContext, bot: Bot):
             score_5=0,
         )
         await set_reaction(bot, message.chat.id, message.message_id, "💔")
-    data_user = generate_data_user(context_data)
-    await message.answer(data_user)
+    data_user, points = generate_data_user(context_data)
+    await message.answer(
+        text=f"{data_user}", reply_markup=ReplyKeyboardRemove()
+    )
+    await request.add_user_data(
+        message.from_user.id,
+        f"{message.from_user.first_name} {message.from_user.last_name}",
+        points,
+        context_data.get("category"),
+    )
     await state.clear()

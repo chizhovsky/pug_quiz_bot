@@ -1,22 +1,26 @@
 from aiogram.types.reaction_type_emoji import ReactionTypeEmoji
 from emoji import emojize
 
+from config import questions_count
 from core.utils.math_operations import calculate_score_sum
 
-emoji_list = [
-    emojize(":one:", language="alias"),
-    emojize(":two:", language="alias"),
-    emojize(":three:", language="alias"),
-    emojize(":four:", language="alias"),
-    emojize(":five:", language="alias"),
-    emojize(":six:", language="alias"),
-]
+emoji_dict = {
+    "one": emojize(":one:", language="alias"),
+    "two": emojize(":two:", language="alias"),
+    "three": emojize(":three:", language="alias"),
+    "four": emojize(":four:", language="alias"),
+    "five": emojize(":five:", language="alias"),
+    "six": emojize(":six:", language="alias"),
+    "globe": emojize(":globe_showing_Europe-Africa:", language="alias"),
+    "thought": emojize(":thought_balloon:", language="alias"),
+}
+emoji_numbers = list(emoji_dict.values())[:6]
 
 
 def generate_data_user(context_data):
     data_user = ""
-    for i in range(6):
-        emoji = emoji_list[i]
+    for i in range(questions_count):
+        emoji = emoji_numbers[i]
         answer_key = f"answer_{i}"
         score_key = f"score_{i}"
         answer = context_data.get(answer_key, "")
@@ -24,7 +28,7 @@ def generate_data_user(context_data):
         data_user += f"{emoji} {answer}\nБаллы: <b>{score}</b>\n\n"
     score_sum = calculate_score_sum(context_data)
     data_user += f"<b>Сумма баллов: {score_sum}</b>"
-    return data_user
+    return data_user, score_sum
 
 
 async def set_reaction(bot, chat_id, message_id, emoji):
