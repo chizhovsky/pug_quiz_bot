@@ -10,3 +10,8 @@ class QuizForm(StatesGroup):
     FIFTH_QUESTION = State()
     SIXTH_QUESTION = State()
     RESULT = State()
+
+
+class RatingForm(StatesGroup):
+    CHOOSE_CATEGORY = State()
+    RATING = State()

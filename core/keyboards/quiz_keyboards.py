@@ -25,3 +25,15 @@ def category_keyboard():
     return keyboard_builder.as_markup(
         resize_keyboard=True, one_time_keyboard=True
     )
+
+
+def start_keyboard():
+    keyboard_builder = InlineKeyboardBuilder()
+    keyboard_builder.button(text="Начать игру", callback_data="start_quiz")
+    return keyboard_builder.as_markup(resize_keyboard=True)
+
+
+def restart_quiz():
+    keyboard_builder = InlineKeyboardBuilder()
+    keyboard_builder.button(text="Играть! ⚡️", callback_data="start_quiz")
+    return keyboard_builder.as_markup(resize_keyboard=True)

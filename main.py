@@ -5,7 +5,7 @@ from logging.handlers import RotatingFileHandler
 from aiogram import Bot, Dispatcher
 
 from config import token
-from core.database.db_connect import connect_to_postgres
+from core.database.get_db_data import connect_to_postgres
 from core.middlewares.dbmiddleware import DBSession
 from core.routers import router as main_router
 from core.utils.start_bot import start

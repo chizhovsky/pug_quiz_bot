@@ -11,11 +11,10 @@ class Request:
         category_id = str(category_id)
         query = (
             f"INSERT into users "
-            f"(user_id, user_name, points, category_{category_id}) "
-            f"VALUES ({user_id}, '{user_name}', {points}, {points}) "
+            f"(user_id, user_name, category_{category_id}) "
+            f"VALUES ({user_id}, '{user_name}', {points}) "
             f"ON CONFLICT (user_id) DO UPDATE SET "
             f"user_name='{user_name}', "
-            f"points = users.points + {points}, "
             f"category_{category_id} = users.category_{category_id} + {points}"
         )
         await self.connector.execute(query)
@@ -38,11 +37,26 @@ async def connect_to_postgres():
 async def get_random_questions(category):
     conn = await connect_to_postgres()
     try:
-        questions = await conn.fetch(
+        data = await conn.fetch(
             f"SELECT * FROM questions WHERE {category} = ANY (category_ids) "
             f"ORDER BY RANDOM() LIMIT {questions_count};"
         )
-        return questions
+        return data
+    except Exception as error:
+        print("Ошибка получения данных из базы данных:", error)
+    finally:
+        await conn.close()
+
+
+async def get_rating(category):
+    conn = await connect_to_postgres()
+    try:
+        data = await conn.fetch(
+            f"SELECT user_name, category_{category} FROM users "
+            f"WHERE category_{category} > 0 ORDER BY category_{category} "
+            f"DESC LIMIT 10;"
+        )
+        return data
     except Exception as error:
         print("Ошибка получения данных из базы данных:", error)
     finally:
