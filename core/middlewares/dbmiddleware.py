@@ -4,7 +4,7 @@ import asyncpg
 from aiogram import BaseMiddleware
 from aiogram.types import TelegramObject
 
-from core.database.db_connect import Request
+from core.database.get_db_data import Request
 
 
 class DBSession(BaseMiddleware):

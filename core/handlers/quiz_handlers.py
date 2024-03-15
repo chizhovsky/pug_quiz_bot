@@ -9,8 +9,12 @@ from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove
 from aiogram.utils import markdown
 
 from config import questions_count
-from core.database.db_connect import Request, get_random_questions
-from core.keyboards.quiz_keyboards import category_keyboard, quiz_keyboard
+from core.database.get_db_data import Request, get_random_questions
+from core.keyboards.quiz_keyboards import (
+    category_keyboard,
+    quiz_keyboard,
+    restart_quiz,
+)
 from core.utils.bot_messages import (
     emoji_numbers,
     generate_data_user,
@@ -51,10 +55,13 @@ async def process_questions(random_questions):
     return quiz_buttons, correct_answers, question_text, image_urls
 
 
+@router.callback_query(lambda c: c.data == "start_quiz")
+async def start_quiz(callback_query: CallbackQuery, state: FSMContext):
+    await choose_category(callback_query.message, state)
+
+
 @router.message(Command("quiz"))
-async def choose_category(
-    message: Message, state: FSMContext, request: Request
-):
+async def choose_category(message: Message, state: FSMContext):
     await message.answer(
         text="Выбери категорию:",
         reply_markup=category_keyboard(),
@@ -206,3 +213,4 @@ async def get_quiz_result(
         context_data.get("category"),
     )
     await state.clear()
+    await message.answer(text="Сыграть ещё раз?", reply_markup=restart_quiz())
